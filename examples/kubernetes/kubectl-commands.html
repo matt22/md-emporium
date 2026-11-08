@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A practical kubectl reference for investigating common Kubernetes workload problems.">
+  <title>kubectl field guide</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17212b;
+      --muted: #586879;
+      --line: #d8e2ec;
+      --blue: #245f91;
+      --blue-deep: #183f62;
+      --paper: #fbfcfd;
+      --wash: #edf5fb;
+      --code: #f2f6f9;
+      --green: #3f6b5b;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 18%, rgba(61, 125, 175, .13) 0 1px, transparent 1.7px),
+        radial-gradient(circle at 82% 9%, rgba(61, 125, 175, .10) 0 1px, transparent 1.7px),
+        radial-gradient(ellipse at 78% 0%, rgba(206, 228, 245, .55), transparent 34rem),
+        linear-gradient(180deg, #f7fafc 0, var(--paper) 28rem);
+      background-size: 31px 31px, 43px 43px, auto, auto;
+      line-height: 1.6;
+    }
+    a { color: var(--blue); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    a:hover { color: var(--blue-deep); }
+    .wrap { width: min(100% - 40px, 1080px); margin-inline: auto; }
+    header { padding: 76px 0 48px; }
+    .eyebrow { color: var(--blue); font-size: .75rem; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; }
+    h1 { max-width: 760px; margin: 14px 0 16px; font-family: Georgia, "Times New Roman", serif; font-size: clamp(2.8rem, 7vw, 5.3rem); font-weight: 500; letter-spacing: -.055em; line-height: .98; }
+    .intro { max-width: 650px; color: var(--muted); font-size: 1.08rem; }
+    .meta { display: flex; flex-wrap: wrap; gap: 10px 24px; margin-top: 26px; color: var(--muted); font-size: .88rem; }
+    .meta span::before { content: ""; display: inline-block; width: 7px; height: 7px; margin: 0 9px 1px 0; border-radius: 50%; background: #79a8cc; }
+    .layout { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 48px; align-items: start; padding-bottom: 80px; }
+    aside { position: sticky; top: 24px; padding: 20px 0; }
+    aside h2 { margin: 0 0 12px; color: var(--muted); font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; }
+    aside nav { display: grid; gap: 4px; }
+    aside a { padding: 7px 10px; border-left: 2px solid transparent; color: #445668; font-size: .9rem; text-decoration: none; }
+    aside a:hover { border-color: #73a2c8; background: rgba(224, 238, 248, .6); color: var(--blue-deep); }
+    main { min-width: 0; }
+    .note { margin: 0 0 22px; padding: 16px 18px; border: 1px solid #cfdeea; border-radius: 8px; background: rgba(235, 244, 250, .72); color: #344b5f; font-size: .92rem; }
+    section { scroll-margin-top: 22px; margin-bottom: 32px; padding: 26px; border: 1px solid var(--line); border-radius: 10px; background: rgba(255, 255, 255, .88); box-shadow: 0 8px 28px rgba(27, 54, 76, .035); }
+    .section-head { display: flex; justify-content: space-between; gap: 16px; align-items: baseline; margin-bottom: 4px; }
+    h2 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 1.65rem; font-weight: 500; letter-spacing: -.025em; }
+    .tag { flex: none; color: var(--green); font-size: .73rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    section > p { margin: 6px 0 20px; color: var(--muted); font-size: .94rem; }
+    .example { margin-top: 16px; }
+    .example:first-of-type { margin-top: 0; }
+    .example-title { display: flex; justify-content: space-between; gap: 16px; align-items: baseline; margin-bottom: 7px; }
+    h3 { margin: 0; font-size: .98rem; font-weight: 650; }
+    .why { color: var(--muted); font-size: .84rem; }
+    pre { position: relative; overflow-x: auto; margin: 0; padding: 15px 48px 15px 16px; border: 1px solid #dce5ec; border-radius: 7px; background: var(--code); color: #1e3447; font: .84rem/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; tab-size: 2; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .copy { position: absolute; top: 8px; right: 8px; padding: 5px 8px; border: 1px solid #cfdae3; border-radius: 5px; background: #fff; color: #42586a; font: 600 .72rem/1.2 inherit; cursor: pointer; }
+    .copy:hover { border-color: #8eafc8; color: var(--blue-deep); }
+    .look-for { margin: 8px 0 0; color: #536577; font-size: .84rem; }
+    .look-for strong { color: #314558; }
+    .output { margin-top: 10px; }
+    .output summary { color: var(--blue); font-size: .82rem; cursor: pointer; }
+    .output pre { margin-top: 8px; background: #fbfcfd; color: #536577; }
+    .next { margin-top: 14px; padding-top: 12px; border-top: 1px solid #e5ebf0; color: #445668; font-size: .87rem; }
+    footer { padding: 25px 0 48px; border-top: 1px solid var(--line); color: var(--muted); font-size: .86rem; }
+    @media (max-width: 760px) {
+      header { padding: 52px 0 30px; }
+      .layout { grid-template-columns: 1fr; gap: 16px; }
+      aside { position: static; padding: 14px 0; }
+      aside nav { display: flex; overflow-x: auto; gap: 6px; padding-bottom: 4px; }
+      aside a { flex: none; border: 1px solid var(--line); border-radius: 999px; padding: 6px 11px; }
+      aside a:hover { border-color: #9dbbd1; }
+      section { padding: 20px 16px; }
+      .example-title { display: block; }
+      .why { display: block; margin-top: 2px; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  </style>
+</head>
+<body>
+  <header class="wrap">
+    <div class="eyebrow">Field guide / Kubernetes</div>
+    <h1>kubectl, in context</h1>
+    <p class="intro">A practical reference for investigating workload problems. Each command answers a question, and each result points to a useful next check.</p>
+    <div class="meta"><span>Examples use namespace <code>interview</code></span><span>Commands are read-only unless marked</span></div>
+  </header>
+
+  <div class="wrap layout">
+    <aside aria-label="On this page">
+      <h2>On this page</h2>
+      <nav>
+        <a href="#orient">Orient</a>
+        <a href="#pod">Inspect a pod</a>
+        <a href="#logs">Read logs</a>
+        <a href="#service">Check a Service</a>
+        <a href="#capacity">Check capacity</a>
+        <a href="#rollout">Verify a rollout</a>
+      </nav>
+    </aside>
+
+    <main>
+      <p class="note">Replace example names with the values from your environment. Confirm the current context before running commands. Command output below is illustrative.</p>
+
+      <section id="orient">
+        <div class="section-head"><h2>Orient yourself</h2><span class="tag">Read only</span></div>
+        <p>Confirm the cluster and locate the affected workload before investigating details.</p>
+        <div class="example">
+          <div class="example-title"><h3>Check the active context</h3><span class="why">Am I connected to the intended cluster?</span></div>
+          <pre><code>kubectl config current-context</code><button class="copy" type="button">Copy</button></pre>
+          <p class="look-for"><strong>Look for:</strong> the expected cluster and account in the context name.</p>
+        </div>
+        <div class="example">
+          <div class="example-title"><h3>Find pods and node placement</h3><span class="why">Which pods are affected, and where are they running?</span></div>
+          <pre><code>kubectl get pods -n interview -o wide</code><button class="copy" type="button">Copy</button></pre>
+          <p class="look-for"><strong>Look for:</strong> readiness, restart count, age, status, and the assigned node.</p>
+        </div>
+      </section>
+
+      <section id="pod">
+        <div class="section-head"><h2>Inspect a pod</h2><span class="tag">Read only</span></div>
+        <p>Events, conditions, and the admitted pod specification help separate scheduling problems from container setup problems.</p>
+        <div class="example">
+          <div class="example-title"><h3>Read conditions and events</h3><span class="why">What is preventing the pod from becoming ready?</span></div>
+          <pre><code>kubectl describe pod scanner-abc -n interview</code><button class="copy" type="button">Copy</button></pre>
+          <p class="look-for"><strong>Look for:</strong> <code>FailedScheduling</code>, image pull errors, probe failures, mount errors, and container waiting or termination reasons.</p>
+          <details class="output"><summary>Illustrative event output</summary><pre><code>Warning  FailedScheduling  default-scheduler  0/4 nodes are available: 2 Insufficient memory.</code></pre></details>
+          <p class="next"><strong>Next:</strong> If no node is assigned, inspect resource requests and placement rules. If a node is assigned, follow setup events such as image, volume, or sandbox failures.</p>
+        </div>
+        <div class="example">
+          <div class="example-title"><h3>Inspect the admitted configuration</h3><span class="why">What settings did Kubernetes receive?</span></div>
+          <pre><code>kubectl get pod scanner-abc -n interview -o yaml</code><button class="copy" type="button">Copy</button></pre>
+          <p class="look-for"><strong>Look for:</strong> <code>spec.nodeName</code>, requests and limits, probes, node selectors, tolerations, images, and volume references.</p>
+        </div>
+      </section>
+
+      <section id="logs">
+        <div class="section-head"><h2>Read container logs</h2><span class="tag">Read only</span></div>
+        <p>Use the container name and time window to focus on the failure you are investigating.</p>
+        <div class="example">
+          <div class="example-title"><h3>Read recent logs</h3><span class="why">What did the application report before the issue?</span></div>
+          <pre><code>kubectl logs scanner-abc -n interview -c worker --since=10m --tail=100 --timestamps</code><button class="copy" type="button">Copy</button></pre>
+          <p class="look-for"><strong>Look for:</strong> startup errors, failed dependency calls, and timestamps that match the incident.</p>
+        </div>
+        <div class="example">
+          <div class="example-title"><h3>Read the previous container instance</h3><span class="why">What happened before the restart?</span></div>
+          <pre><code>kubectl logs scanner-abc -n interview -c worker --previous --tail=100</code><button class="copy" type="button">Copy</button></pre>
+          <p class="look-for"><strong>Look for:</strong> the last error before termination. Previous logs cover the prior instance of that container, when available.</p>
+        </div>
+      </section>
+
+      <section id="service">
+        <div class="section-head"><h2>Check a Service</h2><span class="tag">Read only</span></div>
+        <p>Compare the Service selector and ports with its EndpointSlices and the pods behind them.</p>
+        <div class="example">
+          <div class="example-title"><h3>List Services and EndpointSlices</h3><span class="why">Does the Service have ready backends?</span></div>
+          <pre><code>kubectl get services,endpointslices -n interview</code><button class="copy" type="button">Copy</button></pre>
+          <p class="look-for"><strong>Look for:</strong> expected addresses, ports, and endpoint readiness. Then compare the Service selector with pod labels.</p>
+          <p class="next"><strong>Next:</strong> If the endpoints look right, test DNS and connectivity from the same network context as the failing client. A listed endpoint alone does not establish that the request succeeds.</p>
+        </div>
+      </section>
+
+      <section id="capacity">
+        <div class="section-head"><h2>Check capacity</h2><span class="tag">Read only</span></div>
+        <p>Use live usage as one clue. Scheduling decisions depend on requests and eligible node capacity.</p>
+        <div class="example">
+          <div class="example-title"><h3>Inspect node conditions and requests</h3><span class="why">Is a node under pressure or fully requested?</span></div>
+          <pre><code>kubectl describe node worker-1</code><button class="copy" type="button">Copy</button></pre>
+          <p class="look-for"><strong>Look for:</strong> Ready and pressure conditions, taints, allocatable resources, and the allocated requests summary.</p>
+        </div>
+        <div class="example">
+          <div class="example-title"><h3>Check recent pod usage</h3><span class="why">What CPU and memory are pods using now?</span></div>
+          <pre><code>kubectl top pods -n interview --containers</code><button class="copy" type="button">Copy</button></pre>
+          <p class="look-for"><strong>Look for:</strong> unusually high or changing usage. This command needs the resource metrics API; it does not show what the scheduler has reserved.</p>
+        </div>
+      </section>
+
+      <section id="rollout">
+        <div class="section-head"><h2>Verify a rollout</h2><span class="tag">Read only</span></div>
+        <p>Check controller progress and application health after a deployment or mitigation.</p>
+        <div class="example">
+          <div class="example-title"><h3>Wait for Deployment progress</h3><span class="why">Has the Deployment completed its rollout?</span></div>
+          <pre><code>kubectl rollout status deployment/scanner -n interview --timeout=120s</code><button class="copy" type="button">Copy</button></pre>
+          <p class="look-for"><strong>Look for:</strong> the success message or the specific condition that is still blocking progress.</p>
+        </div>
+        <div class="example">
+          <div class="example-title"><h3>Review available revisions</h3><span class="why">What rollout history is available?</span></div>
+          <pre><code>kubectl rollout history deployment/scanner -n interview</code><button class="copy" type="button">Copy</button></pre>
+          <p class="look-for"><strong>Look for:</strong> revision numbers and change history. Rollback is a workload change; confirm the target revision and deployment source before using it.</p>
+        </div>
+        <div class="example">
+          <div class="example-title"><h3>Roll back to a known-good revision</h3><span class="why">Use only when rollback is authorized and suitable.</span></div>
+          <pre><code>kubectl rollout undo deployment/scanner -n interview --to-revision=2</code><button class="copy" type="button">Copy</button></pre>
+          <p class="look-for"><strong>Afterward:</strong> check rollout status, Ready replicas, and the customer operation. Rollback may not restore separately changed configuration or external dependencies.</p>
+        </div>
+      </section>
+
+      <p class="note">For a full troubleshooting exercise, see <a href="../../kubernetes/diagnose-pending-pods.md">Diagnose a Pending Pod</a>. The companion <a href="../../kubernetes/kubectl-commands.md">interview command guide</a> gives a compact overview.</p>
+    </main>
+  </div>
+
+  <footer><div class="wrap">MD Emporium · Kubernetes field guide · Examples are illustrative; adapt them to your cluster and access policy.</div></footer>
+  <script>
+    document.querySelectorAll('.copy').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const code = button.parentElement.querySelector('code').textContent;
+        try {
+          await navigator.clipboard.writeText(code);
+          button.textContent = 'Copied';
+          window.setTimeout(() => { button.textContent = 'Copy'; }, 1400);
+        } catch {
+          button.textContent = 'Select command';
+        }
+      });
+    });
+  </script>
+</body>
+</html>
