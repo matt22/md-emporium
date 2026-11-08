@@ -8,8 +8,14 @@ Each mission is organized around a concrete goal or problem. It gives the agent 
 
 ### Kubernetes
 
-- [Diagnose a Pending Pod](kubernetes/diagnose-pending-pods.md) — trace scheduling and pod setup problems to their cause, choose a targeted mitigation, and verify recovery.
-- [kubectl: Interview Essentials](kubernetes/kubectl-commands.md) — practice a compact set of commands by explaining what each one tests and what to do next.
+- [Diagnose a Pending Pod](kubernetes/diagnose-pending-pods.md) — an agent-facing troubleshooting mission for pod scheduling and setup problems.
+- [kubectl: Interview Essentials](kubernetes/kubectl-commands.md) — a compact command guide for interview practice.
+
+## Human-readable examples
+
+- [kubectl field guide](examples/kubernetes/kubectl-commands.html) — a browsable reference with commands grouped by use case, what to look for, and useful next checks.
+
+Missions give an AI agent the task and working method. Examples provide material to read, adapt, and discuss together.
 
 ## Using a mission
 
@@ -22,7 +28,7 @@ Missions are starting points, not substitutes for the relevant system documentat
 
 ## Contributing
 
-Focused, reusable missions are welcome. Keep each file centered on one goal or problem, use clear steps and verifiable completion criteria, and link authoritative references for technical claims. Prefer concise examples that can be adapted safely.
+Focused, reusable missions and human-readable examples are welcome. Keep each mission centered on one goal or problem, use clear steps and verifiable completion criteria, and link authoritative references for technical claims. Prefer concise examples that can be adapted safely.
 
 ## License
 
